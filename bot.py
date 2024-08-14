@@ -1,4 +1,4 @@
-from telegram import Update
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 from steam import Steam
 from decouple import config
@@ -18,6 +18,14 @@ pubg_app_id = 578080
 # Словарь для хранения состояния ожидания для каждого пользователя
 user_states = {}
 
+# Функция для создания клавиатуры с кнопками
+def create_keyboard():
+    keyboard = [
+        [KeyboardButton("/squadstats"), KeyboardButton("/ronstats")],
+        [KeyboardButton("/pubgstats")]
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
+
 # Функция для проверки валидности Steam ID
 def check_steamid(steam_id):
     return len(steam_id) == 17 and steam_id.isdigit()
@@ -29,23 +37,41 @@ def get_playtime(games, app_id):
             return game.get('playtime_forever', None)
     return None
 
+# Функция для обработки команды /start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id = update.message.from_user.id
+    user_states[user_id] = None
+    await update.message.reply_text(
+        "Сәлем! Статистика алу үшін команданы таңдаңыз:",
+        reply_markup=create_keyboard()
+    )
+
 # Функция для обработки команды /squadstats
 async def squadstats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.message.from_user.id
     user_states[user_id] = 'waiting_for_squad_steam_id'
-    await update.message.reply_text("Squad ойынының статистикасын алу үшін Steam ID енгізіңіз.")
+    await update.message.reply_text(
+        "Squad ойынының статистикасын алу үшін Steam ID енгізіңіз.",
+        reply_markup=create_keyboard()
+    )
 
 # Функция для обработки команды /ronstats
 async def ronstats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.message.from_user.id
     user_states[user_id] = 'waiting_for_ron_steam_id'
-    await update.message.reply_text("Ready Or Not Статистикасын алу үшін Steam ID енгізіңіз.")
+    await update.message.reply_text(
+        "Ready Or Not статистикасын алу үшін Steam ID енгізіңіз.",
+        reply_markup=create_keyboard()
+    )
 
 # Функция для обработки команды /pubgstats
 async def pubgstats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.message.from_user.id
     user_states[user_id] = 'waiting_for_pubg_steam_id'
-    await update.message.reply_text("PUBG ойынының статистикасын алу үшін Steam ID енгізіңіз..")
+    await update.message.reply_text(
+        "PUBG ойынының статистикасын алу үшін Steam ID енгізіңіз.",
+        reply_markup=create_keyboard()
+    )
 
 # Функция для обработки сообщений с Steam ID
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -61,7 +87,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         try:
             user_games = steam.users.get_owned_games(steam_id)
         except Exception as e:
-            await update.message.reply_text(f"Ошибка получения данных о пользователе: {e}")
+            await update.message.reply_text(f"Пайдаланушы туралы ақпарат алу кезіндегі қате: {e}")
             return
 
         games = user_games.get('games', [])
@@ -69,7 +95,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         if playtime_forever is not None:
             playtime_hours = round(playtime_forever / 60, 1)
-            await update.message.reply_text(f"Squad ойын уақыты: {playtime_hours:.1f} cағат")
+            await update.message.reply_text(f"Squad ойын уақыты: {playtime_hours:.1f} сағат")
         else:
             await update.message.reply_text("Squad ойыны пайдаланушының ойындар тізімінде жоқ.")
         
@@ -85,7 +111,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         try:
             user_games = steam.users.get_owned_games(steam_id)
         except Exception as e:
-            await update.message.reply_text(f"Ошибка получения данных о пользователе: {e}")
+            await update.message.reply_text(f"Пайдаланушы туралы ақпарат алу кезіндегі қате: {e}")
             return
 
         games = user_games.get('games', [])
@@ -93,9 +119,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         if playtime_forever is not None:
             playtime_hours = round(playtime_forever / 60, 1)
-            await update.message.reply_text(f"Ready Or Not ойын уақыты: {playtime_hours:.1f} cағат")
+            await update.message.reply_text(f"Ready Or Not ойын уақыты: {playtime_hours:.1f} сағат")
         else:
-            await update.message.reply_text("Ready Or Not ойыны пайдаланушының ойындар тізімінде жоқ")
+            await update.message.reply_text("Ready Or Not ойыны пайдаланушының ойындар тізімінде жоқ.")
         
         user_states[user_id] = None  # Сбрасываем состояние после обработки сообщения
 
@@ -109,7 +135,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         try:
             user_games = steam.users.get_owned_games(steam_id)
         except Exception as e:
-            await update.message.reply_text(f"Ошибка получения данных о пользователе: {e}")
+            await update.message.reply_text(f"Пайдаланушы туралы ақпарат алу кезіндегі қате: {e}")
             return
 
         games = user_games.get('games', [])
@@ -117,9 +143,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         if playtime_forever is not None:
             playtime_hours = round(playtime_forever / 60, 1)
-            await update.message.reply_text(f"PUBG ойын уақыты: {playtime_hours:.1f} cағат")
+            await update.message.reply_text(f"PUBG ойын уақыты: {playtime_hours:.1f} сағат")
         else:
-            await update.message.reply_text("PUBG ойыны пайдаланушының ойындар тізімінде жоқ")
+            await update.message.reply_text("PUBG ойыны пайдаланушының ойындар тізімінде жоқ.")
         
         user_states[user_id] = None  # Сбрасываем состояние после обработки сообщения
 
@@ -128,6 +154,7 @@ if __name__ == '__main__':
     app = ApplicationBuilder().token(TelegramTOKEN).build()
 
     # Обработчики команд и сообщений
+    app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("squadstats", squadstats))
     app.add_handler(CommandHandler("ronstats", ronstats))
     app.add_handler(CommandHandler("pubgstats", pubgstats))
